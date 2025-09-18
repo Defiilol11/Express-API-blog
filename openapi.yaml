@@ -1,0 +1,336 @@
+openapi: 3.0.0
+info:
+  title: Mini Blog API
+  description: API estilo Twitter con usuarios, mensajes, follows y likes.
+  version: 1.0.0
+servers:
+  - url: http://localhost:3000/api
+    description: Local server
+
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+
+  schemas:
+    User:
+      type: object
+      properties:
+        id: { type: integer }
+        email: { type: string }
+        created_at: { type: string, format: date-time }
+        display_name: { type: string }
+        bio: { type: string }
+        avatar_url: { type: string }
+    Message:
+      type: object
+      properties:
+        id: { type: integer }
+        user_id: { type: integer }
+        content: { type: string }
+        created_at: { type: string, format: date-time }
+        display_name: { type: string }
+        avatar_url: { type: string }
+    Follow:
+      type: object
+      properties:
+        follower_id: { type: integer }
+        following_id: { type: integer }
+        followed_at: { type: string, format: date-time }
+    Like:
+      type: object
+      properties:
+        user_id: { type: integer }
+        message_id: { type: integer }
+
+paths:
+  /users:
+    post:
+      summary: Crear usuario
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [email, password, display_name]
+              properties:
+                email: { type: string }
+                password: { type: string }
+                display_name: { type: string }
+      responses:
+        '200':
+          description: Usuario creado
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/User' }
+
+  /users/login:
+    post:
+      summary: Iniciar sesión
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [email, password]
+              properties:
+                email: { type: string }
+                password: { type: string }
+      responses:
+        '200':
+          description: Token JWT
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  token: { type: string }
+
+  /users/{id}:
+    get:
+      summary: Obtener usuario por ID
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema: { type: integer }
+      responses:
+        '200':
+          description: Datos del usuario
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/User' }
+    delete:
+      summary: Eliminar usuario (solo dueño)
+      security: [ { bearerAuth: [] } ]
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema: { type: integer }
+      responses:
+        '200':
+          description: Usuario eliminado
+
+  /messages:
+    post:
+      summary: Crear mensaje
+      security: [ { bearerAuth: [] } ]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [content]
+              properties:
+                content: { type: string, maxLength: 280 }
+      responses:
+        '200':
+          description: Mensaje creado
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Message' }
+
+  /messages/all:
+    get:
+      summary: Listar todos los mensajes (global)
+      responses:
+        '200':
+          description: Lista de mensajes
+          content:
+            application/json:
+              schema:
+                type: array
+                items: { $ref: '#/components/schemas/Message' }
+
+  /messages/latest:
+    get:
+      summary: Últimos 10 mensajes globales
+      responses:
+        '200':
+          description: Últimos mensajes
+          content:
+            application/json:
+              schema:
+                type: array
+                items: { $ref: '#/components/schemas/Message' }
+
+  /messages/feed:
+    get:
+      summary: Feed de mensajes de usuarios seguidos
+      security: [ { bearerAuth: [] } ]
+      responses:
+        '200':
+          description: Feed personalizado
+          content:
+            application/json:
+              schema:
+                type: array
+                items: { $ref: '#/components/schemas/Message' }
+
+  /messages/user/{id}:
+    get:
+      summary: Mensajes de un usuario específico
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema: { type: integer }
+      responses:
+        '200':
+          description: Lista de mensajes
+          content:
+            application/json:
+              schema:
+                type: array
+                items: { $ref: '#/components/schemas/Message' }
+
+  /messages/search/{term}:
+    get:
+      summary: Buscar mensajes
+      parameters:
+        - in: path
+          name: term
+          required: true
+          schema: { type: string }
+      responses:
+        '200':
+          description: Resultados de búsqueda
+          content:
+            application/json:
+              schema:
+                type: array
+                items: { $ref: '#/components/schemas/Message' }
+
+  /messages/{id}/likes:
+    get:
+      summary: Likes de un mensaje
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema: { type: integer }
+      responses:
+        '200':
+          description: Lista de likes
+          content:
+            application/json:
+              schema:
+                type: array
+                items: { $ref: '#/components/schemas/Like' }
+
+  /messages/{id}/like:
+    post:
+      summary: Dar like a un mensaje
+      security: [ { bearerAuth: [] } ]
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema: { type: integer }
+      responses:
+        '200':
+          description: Like agregado
+    delete:
+      summary: Quitar like
+      security: [ { bearerAuth: [] } ]
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema: { type: integer }
+      responses:
+        '200':
+          description: Like eliminado
+
+  /follows:
+    post:
+      summary: Seguir usuario
+      security: [ { bearerAuth: [] } ]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [following_id]
+              properties:
+                following_id: { type: integer }
+      responses:
+        '200':
+          description: Relación creada
+    delete:
+      summary: Dejar de seguir usuario
+      security: [ { bearerAuth: [] } ]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [following_id]
+              properties:
+                following_id: { type: integer }
+      responses:
+        '200':
+          description: Relación eliminada
+
+  /follows/feed:
+    get:
+      summary: Feed de mensajes de usuarios seguidos
+      security: [ { bearerAuth: [] } ]
+      responses:
+        '200':
+          description: Feed
+          content:
+            application/json:
+              schema:
+                type: array
+                items: { $ref: '#/components/schemas/Message' }
+
+  /follows/following:
+    get:
+      summary: Ver a quién sigo (propio)
+      security: [ { bearerAuth: [] } ]
+      responses:
+        '200':
+          description: Lista de usuarios
+
+  /follows/followers:
+    get:
+      summary: Ver mis seguidores
+      security: [ { bearerAuth: [] } ]
+      responses:
+        '200':
+          description: Lista de seguidores
+
+  /follows/{id}/following:
+    get:
+      summary: Ver a quién sigue otro usuario
+      security: [ { bearerAuth: [] } ]
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema: { type: integer }
+      responses:
+        '200':
+          description: Lista de usuarios
+
+  /follows/{id}/followers:
+    get:
+      summary: Ver seguidores de otro usuario
+      security: [ { bearerAuth: [] } ]
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema: { type: integer }
+      responses:
+        '200':
+          description: Lista de seguidores
