@@ -27,8 +27,8 @@ Antes de iniciar, asegúrate de tener instalado:
 
 1. Clonar el repositorio:
    ```bash
-   git clone https://github.com/tuusuario/micro-red-api.git
-   cd micro-red-api
+   git clone  https://github.com/Defiilol11/Express-API-blog.git
+   cd Express-API-blog
    ```
 
 2. Instalar dependencias:
